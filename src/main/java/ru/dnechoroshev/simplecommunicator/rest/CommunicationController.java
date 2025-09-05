@@ -32,7 +32,7 @@ public class CommunicationController {
 
     @DeleteMapping("/terminate-call")
     public void killConnection(String caller) {
-        dispatcher.stopCommunicationByCaller(caller);
+        dispatcher.endCall(caller, null);
     }
 
     @DeleteMapping("/terminate-all")

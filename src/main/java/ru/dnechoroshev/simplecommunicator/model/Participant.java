@@ -25,6 +25,10 @@ public class Participant implements Closeable {
 
     private Socket socket;
 
+    private Thread communicationThread;
+
+    private volatile boolean alive = true;
+
     public Participant(String name, int port, Participant correspondent) {
         this.name = name;
         this.port = port;
@@ -39,16 +43,23 @@ public class Participant implements Closeable {
     }
 
     public void connect() {
-        try (var s = new ServerSocket(port)) {
-            log.debug("Слушаем порт {}", port);
-            try (Socket incomingSocket = s.accept()) {
-                log.info("Подключен клиент: {}", incomingSocket.getInetAddress());
-                socket = incomingSocket;
+        communicationThread = new Thread(() -> {
+            try (var s = new ServerSocket(port)) {
+                log.debug("Слушаем порт {}", port);
+                try (Socket incomingSocket = s.accept()) {
+                    log.info("Подключен клиент: {}", incomingSocket.getInetAddress());
+                    socket = incomingSocket;
+                    while (alive) {
+                        Thread.sleep(1000);
+                    }
+                    log.info("Отключен клиент: {}", incomingSocket.getInetAddress());
+                }
+            } catch (IOException | InterruptedException e) {
+                log.error("Ошибка коммуникации", e);
+                throw new RuntimeException(e);
             }
-        } catch (IOException e) {
-            log.error("Ошибка коммуникации", e);
-            throw new RuntimeException(e);
-        }
+        });
+        communicationThread.start();
     }
 
     public InputStream getInputStream() throws IOException {
@@ -67,6 +78,6 @@ public class Participant implements Closeable {
 
     @Override
     public void close() throws IOException {
-        socket.close();
+        alive = false;
     }
 }

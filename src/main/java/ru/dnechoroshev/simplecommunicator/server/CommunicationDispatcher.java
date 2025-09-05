@@ -58,6 +58,8 @@ public class CommunicationDispatcher {
             log.info("Закрываем соединение {} -> {}", targetComm.getCaller().getName(), targetComm.getCallee().getName() );
             targetComm.close();
             liveCommunications.remove(targetComm);
+            portBag.add(targetComm.getCaller().getPort());
+            portBag.add(targetComm.getCallee().getPort());
         }
 
     }

@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: simple-communicator-server
+logging:
+  level:
+    ru.dnechoroshev.simplecommunicator.model.Participant: DEBUG
