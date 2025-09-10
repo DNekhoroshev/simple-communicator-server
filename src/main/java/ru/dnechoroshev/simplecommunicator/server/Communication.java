@@ -20,7 +20,7 @@ public class Communication implements Closeable {
     @Getter
     private final Participant callee;
 
-    private ThreadPoolExecutor dispatchPool =  (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+    private ExecutorService dispatchPool =  Executors.newFixedThreadPool(2);
 
     private volatile boolean live;
 
@@ -40,6 +40,7 @@ public class Communication implements Closeable {
 
     public void connectParticipants() {
 
+        dispatchPool.shutdown();
         try {
             if (!dispatchPool.awaitTermination(15, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Таймаут синхронизации абонентов");

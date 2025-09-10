@@ -17,8 +17,8 @@ public class CallerHandler implements Runnable {
     private static final int CONNECTION_STARTING = 0xFFAA002;
     private static final int CONNECTION_TIMEOUT = 0xFFAA003;
 
-    private static final int TIMEOUT_SECONDS = 60*1000;
-    private static final int CHECK_DELAY_MS = 100;
+    private static final int TIMEOUT_SECONDS = 15*1000;
+    private static final int CHECK_DELAY_MS = 200;
 
     private final Participant participant;
 
@@ -32,25 +32,27 @@ public class CallerHandler implements Runnable {
 
     @Override
     public void run() {
-        log.debug("Соединяем: {}", participant.getName());
+        log.info("Participant {} waiting for connection", participant.getName());
         participant.connect();
-
+        log.info("Participant {} connected", participant.getName());
         try {
             // Мы его тут специально не закрываем, т.к. основной обмен пойдет в другом потоке, тут только handshake
             var callerOut = new DataOutputStream(participant.getOutputStream());
             var remainingTime = TIMEOUT_SECONDS;
             while (participant.getCorrespondent().getOutputStream() == null && remainingTime > 0) {
-                log.debug("{} ожидает ответа от {}", participant.getName(), participant.getCorrespondent().getName());
+                log.info("{} ожидает ответа от {}", participant.getName(), participant.getCorrespondent().getName());
                 callerOut.writeInt(WAITING_FOR_RESPONSE);
+                log.info("Remaining time {}", remainingTime);
                 Thread.sleep(CHECK_DELAY_MS);
                 remainingTime = remainingTime - CHECK_DELAY_MS;
+                log.info("Remaining time {}", remainingTime);
             }
 
             if (remainingTime > 0) {
-                log.debug("{} соединился с {}", participant.getName(), participant.getCorrespondent().getName());
+                log.info("{} соединился с {}", participant.getName(), participant.getCorrespondent().getName());
                 callerOut.writeInt(CONNECTION_STARTING);
             } else {
-                log.debug("Таймаут соединения {} с {}", participant.getName(), participant.getCorrespondent().getName());
+                log.info("Таймаут соединения {} с {}", participant.getName(), participant.getCorrespondent().getName());
                 callerOut.writeInt(CONNECTION_TIMEOUT);
                 callerOut.close();
             }

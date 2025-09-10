@@ -4,3 +4,8 @@ spring:
 logging:
   level:
     ru.dnechoroshev.simplecommunicator.model.Participant: DEBUG
+
+general:
+  debug:
+    enable-auto-response: true
+    auto-response-callee: DummyAbonent

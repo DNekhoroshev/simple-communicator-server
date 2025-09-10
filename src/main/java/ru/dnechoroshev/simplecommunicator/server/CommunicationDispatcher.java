@@ -1,6 +1,7 @@
 package ru.dnechoroshev.simplecommunicator.server;
 
-import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -10,56 +11,51 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
+@RequiredArgsConstructor
 @Service
 public class CommunicationDispatcher {
 
-    private static final int INITIAL_COMM_PORT = 21000;
-    private static final int MAX_OPEN_PORTS = 100;
+    private final ConnectionFactory connectionFactory;
 
-    private final Set<Integer> portBag = Collections.synchronizedSortedSet(new TreeSet<>());
     private final Map<String, Participant> actualCalls = new ConcurrentHashMap<>();
-    private final Set<Communication> liveCommunications = Collections.synchronizedSet(new HashSet<>());
 
-    @PostConstruct
-    public void init() {
-        for (int i = 0; i < MAX_OPEN_PORTS; i++) {
-            portBag.add(INITIAL_COMM_PORT + i);
-        }
-    }
+    private final Map<String, Participant> liveCommunications = new ConcurrentHashMap<>();
 
     public String checkIncomingCall(String calleeName) {
+        log.info("Actual calls exist for {}", actualCalls.keySet());
         return actualCalls.containsKey(calleeName)
                 ? actualCalls.get(calleeName).getName()
                 : null;
     }
 
+    @SneakyThrows
     public int startCall(String callerName, String calleeName) {
-        Participant caller = new Participant(callerName, this.getFreePort(), new Participant(calleeName, this.getFreePort()));
+        Participant caller = connectionFactory.createConnectedParticipant(callerName, calleeName);
         actualCalls.put(calleeName, caller);
-        Communication communication = new Communication(caller, caller.getCorrespondent());
-        communication.touchCaller();
-        liveCommunications.add(communication);
+        liveCommunications.put(callerName, caller);
         return caller.getPort();
     }
 
     public void endCall(String callerName, String calleeName) {
-        Communication targetComm = null;
+
+        String targetPartName = null;
         if (StringUtils.isNotBlank(calleeName)) {
-            targetComm = liveCommunications.stream()
-                    .filter(c -> c.getCallee().getName().equals(calleeName))
-                    .findAny().orElse(null);
+            targetPartName = calleeName;
         } else if (StringUtils.isNotBlank(callerName)) {
-            targetComm = liveCommunications.stream()
-                    .filter(c -> c.getCaller().getName().equals(callerName))
-                    .findAny().orElse(null);
+            targetPartName = callerName;
         }
 
-        if (targetComm != null) {
-            log.info("Закрываем соединение {} -> {}", targetComm.getCaller().getName(), targetComm.getCallee().getName() );
-            targetComm.close();
-            liveCommunications.remove(targetComm);
-            portBag.add(targetComm.getCaller().getPort());
-            portBag.add(targetComm.getCallee().getPort());
+        if (targetPartName != null) {
+            Participant participant = liveCommunications.get(targetPartName);
+            log.info("Закрываем соединение {} -> {}", participant.getName(), participant.getCorrespondent().getName() );
+            participant.close();
+            participant.getCorrespondent().close();
+            liveCommunications.remove(participant.getName());
+            liveCommunications.remove(participant.getCorrespondent().getName());
+            connectionFactory.releasePort(
+                    participant.getPort(),
+                    participant.getCorrespondent().getPort()
+            );
         }
 
     }
@@ -68,14 +64,8 @@ public class CommunicationDispatcher {
         if (actualCalls.containsKey(calleeName)) {
             try {
                 Participant callee = actualCalls.get(calleeName).getCorrespondent();
-                Communication currentCommmunication = liveCommunications
-                        .stream()
-                        .filter(c -> c.getCallee().getName().equals(calleeName))
-                        .findAny()
-                        .orElseThrow();
-
-                currentCommmunication.touchCallee();
-                currentCommmunication.connectParticipants();
+                callee.connect();
+                liveCommunications.put(calleeName, callee);
                 return callee.getPort();
             } catch (Exception e) {
                 log.error("Ошибка установления соединения", e);
@@ -89,26 +79,11 @@ public class CommunicationDispatcher {
         }
     }
 
-    public void stopCommunicationByCaller(String callerName) {
-        liveCommunications.stream()
-                .filter(comm -> comm.getCaller().getName().equals(callerName))
-                .forEach(c -> c.close());
-    }
-
-    public void stopCommunicationByCallee(String calleeName) {
-        liveCommunications.stream()
-                .filter(comm -> comm.getCallee().getName().equals(calleeName))
-                .forEach(c -> c.close());
-    }
-
     public void stopAllCommunications() {
-        liveCommunications.stream().forEach(c -> c.close());
-    }
-
-    private synchronized int getFreePort() {
-        int freePort = portBag.stream().mapToInt(Integer::intValue).min().orElseThrow();
-        portBag.remove(freePort);
-        return freePort;
+        liveCommunications.forEach((k ,v) -> {
+            log.info("Закрываем соединение для {}", k);
+            v.close();
+        });
     }
 
 }

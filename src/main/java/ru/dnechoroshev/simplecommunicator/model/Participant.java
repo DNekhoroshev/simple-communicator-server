@@ -1,33 +1,40 @@
 package ru.dnechoroshev.simplecommunicator.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 @Data
 @Slf4j
-public class Participant implements Closeable {
+@EqualsAndHashCode(of = {"name", "port"})
+public abstract class Participant implements Closeable {
+
+    protected static final int WAITING_FOR_RESPONSE = 0xFFAA001;
+    protected static final int CONNECTION_STARTING = 0xFFAA002;
+    protected static final int CONNECTION_TIMEOUT = 0xFFAA003;
+
+    protected static final int TIMEOUT_SECONDS = 15*1000;
+    protected static final int CHECK_DELAY_MS = 200;
 
     // Имя абонента
-    private String name;
+    protected String name;
 
     // Вызываемый/вызывающий абонент
-    private Participant correspondent;
+    protected Participant correspondent;
 
     // Выделяемый системой порт для текущего абонента
-    private int port;
+    protected int port;
 
-    private Socket socket;
+    protected Socket socket;
 
-    private Thread communicationThread;
+    protected Thread communicationThread;
 
-    private volatile boolean alive = true;
+    protected volatile boolean connected;
+    protected volatile boolean ready;
 
     public Participant(String name, int port, Participant correspondent) {
         this.name = name;
@@ -42,25 +49,7 @@ public class Participant implements Closeable {
         this(name, port, null);
     }
 
-    public void connect() {
-        communicationThread = new Thread(() -> {
-            try (var s = new ServerSocket(port)) {
-                log.debug("Слушаем порт {}", port);
-                try (Socket incomingSocket = s.accept()) {
-                    log.info("Подключен клиент: {}", incomingSocket.getInetAddress());
-                    socket = incomingSocket;
-                    while (alive) {
-                        Thread.sleep(1000);
-                    }
-                    log.info("Отключен клиент: {}", incomingSocket.getInetAddress());
-                }
-            } catch (IOException | InterruptedException e) {
-                log.error("Ошибка коммуникации", e);
-                throw new RuntimeException(e);
-            }
-        });
-        communicationThread.start();
-    }
+    public abstract void connect();
 
     public InputStream getInputStream() throws IOException {
         if (socket == null) {
@@ -76,8 +65,19 @@ public class Participant implements Closeable {
         return socket.getOutputStream();
     }
 
+    protected void processError(Exception e) {
+        log.error("Ошибка соединения: {}", name);
+        connected = false;
+        throw new RuntimeException(e);
+    }
+
     @Override
-    public void close() throws IOException {
-        alive = false;
+    public void close() {
+        connected = false;
+        try {
+            socket.close();
+        } catch (IOException e) {
+            log.error("Ошибка закрытия клиента {}", name, e);
+        }
     }
 }
