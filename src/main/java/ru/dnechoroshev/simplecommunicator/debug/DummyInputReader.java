@@ -32,7 +32,7 @@ public class DummyInputReader implements Callable<File> {
         return AudioReader.readAudioStreamToFile(input, grabDuration);
     }
 
-    public synchronized void startAudioGrabbinfFor(int duration) {
+    public synchronized void startAudioGrabbingFor(int duration) {
         this.grabDuration = duration;
         this.grabInput = true;
     }
