@@ -51,7 +51,7 @@ public class DummyConnectionHandler {
                 DummyInputReader reader = new DummyInputReader(inputStream);
                 Future<File> grabbedAudioFile = executor.submit(reader);
 
-                CompletableFuture f1 = CompletableFuture
+                CompletableFuture<Void> f1 = CompletableFuture
                         .supplyAsync(() -> {
                             DummyTestAudioSender.sendAudioFileToOut("static/recorded_audio.wav", outputStream);
                             return null;
@@ -80,7 +80,6 @@ public class DummyConnectionHandler {
 
     private static File getFile(Future<File> grabbedAudioFile) {
         try {
-            log.info("1");
             return grabbedAudioFile.get();
         } catch (Exception e) {
             throw new RuntimeException(e);

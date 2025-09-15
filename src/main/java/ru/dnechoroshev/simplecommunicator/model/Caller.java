@@ -49,9 +49,10 @@ public class Caller extends Participant {
                     }
                     try (var in = new BufferedInputStream(getInputStream()); var calleeOut = new BufferedOutputStream(correspondent.getOutputStream());) {
                         in.transferTo(calleeOut);
-                        log.info("{}: Звонок завершен", name);
                     } catch (IOException e) {
-                        processError(e);
+                        log.debug("Звонок завершен. Детальное сообщение: {}", e.getMessage());
+                    } finally {
+                        log.info("{}: Звонок завершен", name);
                     }
                 } else if (connected) {
                     log.info("Таймаут соединения {} с {}", name, correspondent.getName());
