@@ -30,9 +30,14 @@ public class CommunicationController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @DeleteMapping("/terminate-call")
-    public void killConnection(String caller) {
-        dispatcher.endCall(caller, null);
+    @DeleteMapping("/hangup-by-caller")
+    public void killConnectionByCaller(String caller) {
+        dispatcher.endCall(caller);
+    }
+
+    @DeleteMapping("/hangup-by-callee")
+    public void killConnectionByCallee(String callee) {
+        dispatcher.endCall(callee);
     }
 
     @DeleteMapping("/terminate-all")

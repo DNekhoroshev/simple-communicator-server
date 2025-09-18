@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import ru.dnechoroshev.simplecommunicator.model.Participant;
+import ru.dnechoroshev.simplecommunicator.model.AbstractParticipant;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -20,7 +20,7 @@ public class CallerHandler implements Runnable {
     private static final int TIMEOUT_SECONDS = 15*1000;
     private static final int CHECK_DELAY_MS = 200;
 
-    private final Participant participant;
+    private final AbstractParticipant participant;
 
     @Getter
     @Setter

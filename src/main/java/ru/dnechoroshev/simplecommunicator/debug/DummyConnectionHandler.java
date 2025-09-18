@@ -11,6 +11,8 @@ import java.io.*;
 import java.net.Socket;
 import java.util.concurrent.*;
 
+import static ru.dnechoroshev.simplecommunicator.util.ConnectionState.*;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -19,9 +21,6 @@ public class DummyConnectionHandler {
     private final ExecutorService techPool =  Executors.newSingleThreadExecutor();
 
     private static final String SERVER_ADDRESS = "127.0.0.1";
-    private static final int WAITING_FOR_RESPONSE = 0xFFAA001;
-    private static final int CONNECTION_STARTING = 0xFFAA002;
-    private static final int CONNECTION_TIMEOUT = 0xFFAA003;
 
     @Getter
     private boolean alive;
@@ -38,8 +37,8 @@ public class DummyConnectionHandler {
 
                 DataInputStream dis = new DataInputStream(inputStream);
 
-                int status = WAITING_FOR_RESPONSE;
-                while (status == WAITING_FOR_RESPONSE) {
+                int status = WAITING_FOR_RESPONSE.getState();
+                while (status == WAITING_FOR_RESPONSE.getState()) {
                     log.info("Ожидаем ответа сервера...");
                     status = dis.readInt();
                 }
@@ -87,12 +86,12 @@ public class DummyConnectionHandler {
     }
 
     private void processStatus(int status) {
-        if (status == CONNECTION_STARTING) {
+        if (status == CONNECTION_STARTING.getState()) {
             log.info("Ответ сервера получен");
             if (!alive) {
                 throw new RuntimeException("Невозможно установить соединение");
             }
-        } else if (status == CONNECTION_TIMEOUT) {
+        } else if (status == CONNECTION_TIMEOUT.getState()) {
             log.warn("Таймаут соединения с сервером");
             alive = false;
         } else {

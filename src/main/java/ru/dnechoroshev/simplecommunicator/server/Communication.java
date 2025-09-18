@@ -3,7 +3,7 @@ package ru.dnechoroshev.simplecommunicator.server;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.dnechoroshev.simplecommunicator.model.Participant;
+import ru.dnechoroshev.simplecommunicator.model.AbstractParticipant;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -16,15 +16,15 @@ public class Communication implements Closeable {
     private final Logger log = LoggerFactory.getLogger(Communication.class);
 
     @Getter
-    private final Participant caller;
+    private final AbstractParticipant caller;
     @Getter
-    private final Participant callee;
+    private final AbstractParticipant callee;
 
     private ExecutorService dispatchPool =  Executors.newFixedThreadPool(2);
 
     private volatile boolean live;
 
-    public Communication(Participant caller, Participant callee) {
+    public Communication(AbstractParticipant caller, AbstractParticipant callee) {
         this.caller = caller;
         this.callee = callee;
         this.live = true;

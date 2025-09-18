@@ -3,7 +3,7 @@ spring:
     name: simple-communicator-server
 logging:
   level:
-    ru.dnechoroshev.simplecommunicator.model.Participant: DEBUG
+    ru.dnechoroshev.simplecommunicator.model.ru.dnechoroshev.simplecommunicator.model.AbstractParticipant: DEBUG
 
 general:
   debug:

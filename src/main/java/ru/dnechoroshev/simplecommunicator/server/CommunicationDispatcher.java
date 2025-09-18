@@ -5,10 +5,13 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import ru.dnechoroshev.simplecommunicator.model.Participant;
+import ru.dnechoroshev.simplecommunicator.exception.ConnectionHandshakeException;
+import ru.dnechoroshev.simplecommunicator.model.CallSession;
+import ru.dnechoroshev.simplecommunicator.model.AbstractParticipant;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -17,65 +20,69 @@ public class CommunicationDispatcher {
 
     private final ConnectionFactory connectionFactory;
 
-    private final Map<String, Participant> actualCalls = new ConcurrentHashMap<>();
+    private final Map<String, CallSession> actualCalls = new ConcurrentHashMap<>();
 
-    private final Map<String, Participant> liveCommunications = new ConcurrentHashMap<>();
+    private final Map<String, CallSession> liveCommunications = new ConcurrentHashMap<>();
 
     public String checkIncomingCall(String calleeName) {
         log.info("Actual calls exist for {}", actualCalls.keySet());
         return actualCalls.containsKey(calleeName)
-                ? actualCalls.get(calleeName).getName()
+                ? actualCalls.get(calleeName).getCaller().getName()
                 : null;
+    }
+
+    public Stream<CallSession> getCalls() {
+        return actualCalls.values().stream();
     }
 
     @SneakyThrows
     public int startCall(String callerName, String calleeName) {
-        Participant caller = connectionFactory.createConnectedParticipant(callerName, calleeName);
-        actualCalls.put(calleeName, caller);
-        liveCommunications.put(callerName, caller);
+        AbstractParticipant caller = connectionFactory.createConnectedParticipant(callerName, calleeName);
+        CallSession session = new CallSession(caller, caller.getCorrespondent());
+        actualCalls.put(calleeName, session);
+        liveCommunications.put(callerName, session);
         return caller.getPort();
     }
 
-    public void endCall(String callerName, String calleeName) {
+    public void endCall(String participantName) {
 
-        String targetPartName = null;
-        if (StringUtils.isNotBlank(calleeName)) {
-            targetPartName = calleeName;
-        } else if (StringUtils.isNotBlank(callerName)) {
-            targetPartName = callerName;
+        CallSession session = actualCalls.containsKey(participantName)
+                ? actualCalls.get(participantName)
+                : liveCommunications.get(participantName);
+        closeSession(session);
+
+    }
+
+    public void closeSession(CallSession session) {
+        if (session != null) {
+            AbstractParticipant caller = session.getCaller();
+            AbstractParticipant callee = session.getCallee();
+            log.info("Закрываем соединение {} -> {}", caller, callee);
+            liveCommunications.remove(caller.getName());
+            liveCommunications.remove(callee.getName());
+            actualCalls.remove(callee.getName());
+            connectionFactory.releasePorts(session);
+            session.close();
         }
-
-        if (targetPartName != null) {
-            Participant participant = liveCommunications.get(targetPartName);
-            log.info("Закрываем соединение {} -> {}", participant.getName(), participant.getCorrespondent().getName() );
-            participant.close();
-            participant.getCorrespondent().close();
-            liveCommunications.remove(participant.getName());
-            liveCommunications.remove(participant.getCorrespondent().getName());
-            connectionFactory.releasePort(
-                    participant.getPort(),
-                    participant.getCorrespondent().getPort()
-            );
-        }
-
     }
 
     public int acceptCall(String calleeName) {
         if (actualCalls.containsKey(calleeName)) {
             try {
-                Participant callee = actualCalls.get(calleeName).getCorrespondent();
+                CallSession session = actualCalls.get(calleeName);
+                AbstractParticipant callee = session.getCallee();
                 callee.connect();
-                liveCommunications.put(calleeName, callee);
+                liveCommunications.put(calleeName, session);
                 return callee.getPort();
             } catch (Exception e) {
                 log.error("Ошибка установления соединения", e);
-                throw new RuntimeException(e);
+                throw new ConnectionHandshakeException("Ошибка установления соединения", e);
             } finally {
                 actualCalls.remove(calleeName);
             }
         } else {
             log.error("Не найден активный звонок для {}", calleeName);
-            throw new RuntimeException("Не найден активный звонок");
+            throw new ConnectionHandshakeException(calleeName + ": не найден активный звонок");
         }
     }
 

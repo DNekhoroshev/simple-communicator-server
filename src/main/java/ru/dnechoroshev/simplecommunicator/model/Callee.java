@@ -9,9 +9,9 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 @Slf4j
-public class Callee extends Participant {
+public class Callee extends AbstractParticipant {
 
-    public Callee(String name, int port, Participant correspondent) {
+    public Callee(String name, int port, AbstractParticipant correspondent) {
         super(name, port, correspondent);
     }
 

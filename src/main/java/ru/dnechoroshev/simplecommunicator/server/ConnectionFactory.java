@@ -2,9 +2,10 @@ package ru.dnechoroshev.simplecommunicator.server;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
+import ru.dnechoroshev.simplecommunicator.model.CallSession;
 import ru.dnechoroshev.simplecommunicator.model.Callee;
 import ru.dnechoroshev.simplecommunicator.model.Caller;
-import ru.dnechoroshev.simplecommunicator.model.Participant;
+import ru.dnechoroshev.simplecommunicator.model.AbstractParticipant;
 
 import java.util.Collections;
 import java.util.Set;
@@ -25,8 +26,8 @@ public class ConnectionFactory {
         }
     }
 
-    public Participant createConnectedParticipant(String callerName, String calleeName) {
-        Participant p = new Caller(callerName, this.getFreePort(), new Callee(calleeName, this.getFreePort()));
+    public AbstractParticipant createConnectedParticipant(String callerName, String calleeName) {
+        AbstractParticipant p = new Caller(callerName, this.getFreePort(), new Callee(calleeName, this.getFreePort()));
         p.connect();
         return p;
     }
@@ -35,6 +36,10 @@ public class ConnectionFactory {
         for (int port : portList) {
             portBag.add(port);
         }
+    }
+
+    public void releasePorts(CallSession session) {
+        this.releasePort(session.getCaller().getPort(), session.getCallee().getPort());
     }
 
     private synchronized int getFreePort() {
