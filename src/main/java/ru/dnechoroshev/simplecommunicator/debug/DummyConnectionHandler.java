@@ -18,7 +18,7 @@ import static ru.dnechoroshev.simplecommunicator.util.ConnectionState.*;
 @Slf4j
 public class DummyConnectionHandler {
 
-    private final ExecutorService techPool =  Executors.newSingleThreadExecutor();
+    //private final ExecutorService techPool =  Executors.newSingleThreadExecutor();
 
     private static final String SERVER_ADDRESS = "127.0.0.1";
 
@@ -27,8 +27,8 @@ public class DummyConnectionHandler {
 
     public void handleConnection(@NonNull ConnectionDto connection) {
         log.info("Соединяемся с {}:{}", SERVER_ADDRESS, connection.port());
-        final ExecutorService executor = Executors.newFixedThreadPool(3);
-        techPool.submit(() -> {
+        final ExecutorService executor = Executors.newFixedThreadPool(5);
+        executor.submit(() -> {
             try (Socket socket = new Socket(SERVER_ADDRESS, connection.port())) {
                 log.info("Соединение установлено");
                 alive = true;
@@ -55,7 +55,7 @@ public class DummyConnectionHandler {
                             DummyTestAudioSender.sendAudioFileToOut("static/recorded_audio.wav", outputStream);
                             return null;
                         }, executor)
-                        .thenApply(result -> {
+                        .thenApplyAsync(result -> {
                             reader.startAudioGrabbingFor(10000);
                             return getFile(grabbedAudioFile);
                         }).thenAccept(result -> {

@@ -1,6 +1,7 @@
 package ru.dnechoroshev.simplecommunicator.model;
 
 import lombok.extern.slf4j.Slf4j;
+import ru.dnechoroshev.simplecommunicator.exception.CommunicationException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -56,7 +57,7 @@ public class Callee extends AbstractParticipant {
                 }
             } catch (IOException | InterruptedException e) {
                 log.error("Ошибка коммуникации", e);
-                throw new RuntimeException(e);
+                throw new CommunicationException("Ошибка коммуникации", e);
             } finally {
                 close();
             }

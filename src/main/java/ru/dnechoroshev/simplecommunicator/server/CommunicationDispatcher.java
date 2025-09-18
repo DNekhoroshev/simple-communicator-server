@@ -24,7 +24,7 @@ public class CommunicationDispatcher {
     private final Map<String, CallSession> liveCommunications = new ConcurrentHashMap<>();
 
     public String checkIncomingCall(String calleeName) {
-        log.info("Actual calls exist for {}", actualCalls.keySet());
+        log.debug("Actual calls exist for {}", actualCalls.keySet());
         return actualCalls.containsKey(calleeName)
                 ? actualCalls.get(calleeName).getCaller().getName()
                 : null;
