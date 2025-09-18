@@ -23,9 +23,9 @@ public class Caller extends AbstractParticipant {
     public void connect() {
         Thread connectionListener = new Thread(() -> {
             try {
-                var s = new ServerSocket(port);
+                serverSocket = new ServerSocket(port);
                 log.info("Слушаем порт {}", port);
-                socket = s.accept();
+                socket = serverSocket.accept();
                 connected = true;
                 log.info("Подключен клиент: {}", socket.getInetAddress());
 

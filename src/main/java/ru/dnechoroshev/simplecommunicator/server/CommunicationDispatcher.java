@@ -3,7 +3,6 @@ package ru.dnechoroshev.simplecommunicator.server;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import ru.dnechoroshev.simplecommunicator.exception.ConnectionHandshakeException;
 import ru.dnechoroshev.simplecommunicator.model.CallSession;
@@ -45,7 +44,7 @@ public class CommunicationDispatcher {
     }
 
     public void endCall(String participantName) {
-
+        log.info("{} вешает трубку", participantName);
         CallSession session = actualCalls.containsKey(participantName)
                 ? actualCalls.get(participantName)
                 : liveCommunications.get(participantName);
@@ -58,11 +57,11 @@ public class CommunicationDispatcher {
             AbstractParticipant caller = session.getCaller();
             AbstractParticipant callee = session.getCallee();
             log.info("Закрываем соединение {} -> {}", caller, callee);
+            session.close();
             liveCommunications.remove(caller.getName());
             liveCommunications.remove(callee.getName());
             actualCalls.remove(callee.getName());
             connectionFactory.releasePorts(session);
-            session.close();
         }
     }
 

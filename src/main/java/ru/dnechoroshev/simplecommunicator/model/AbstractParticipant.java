@@ -6,6 +6,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 @Data
@@ -29,6 +30,8 @@ public abstract class AbstractParticipant implements Closeable {
 
     // Выделяемый системой порт для текущего абонента
     protected int port;
+
+    protected ServerSocket serverSocket;
 
     protected Socket socket;
 
@@ -67,15 +70,17 @@ public abstract class AbstractParticipant implements Closeable {
     }
 
     protected void processError(Exception e) {
-        log.error("Ошибка соединения: {}", name);
+        log.debug("Ошибка соединения: {}", name);
         connected = false;
-        throw new RuntimeException(e);
     }
 
     @Override
     public void close() {
         connected = false;
         try {
+            if (serverSocket != null) {
+                serverSocket.close();
+            }
             if (socket != null) {
                 socket.close();
             }
